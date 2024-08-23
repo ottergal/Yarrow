@@ -9,6 +9,7 @@ pub use crate::elements::drop_down_menu::{DropDownMenu, DropDownMenuStyle, MenuE
 pub use crate::elements::icon::{Icon, IconStyle};
 pub use crate::elements::label::{Label, LabelStyle, TextIconLayout};
 pub use crate::elements::paragraph::{Paragraph, ParagraphStyle};
+pub use crate::elements::progress_bar::{ProgressBar, ProgressBarStyle};
 pub use crate::elements::quad::QuadElement;
 pub use crate::elements::radio_button::{RadioButton, RadioButtonGroup, RadioButtonStyle};
 pub use crate::elements::resize_handle::{ResizeHandle, ResizeHandleLayout, ResizeHandleStyle};
