@@ -46,6 +46,8 @@ impl ElementStyle for ProgressBarStyle {
 #[element_builder_class]
 #[element_builder_rect]
 #[element_builder_hidden]
+#[element_builder_disabled]
+#[element_builder_tooltip]
 #[derive(Default)]
 pub struct ProgressBarBuilder {
     percent: f32,
@@ -82,12 +84,16 @@ impl ProgressBarElement {
             rect,
             manually_hidden,
             scissor_rect,
+            tooltip_data,
+            disabled,
         } = builder;
 
         let (z_index, scissor_rect, class) = cx.builder_values(z_index, scissor_rect, class);
 
         let shared_state = Rc::new(RefCell::new(SharedState {
             percent: percent,
+            disabled,
+            tooltip_inner: TooltipInner::new(tooltip_data),
         }));
 
         let element_builder = ElementBuilder {
@@ -111,7 +117,8 @@ impl ProgressBarElement {
 
 impl<A: Clone + 'static> Element<A> for ProgressBarElement {
     fn flags(&self) -> ElementFlags {
-        ElementFlags::PAINTS
+        ElementFlags::PAINTS |
+        ElementFlags::LISTENS_TO_POINTER_INSIDE_BOUNDS
     }
 
     fn on_event(
@@ -119,6 +126,12 @@ impl<A: Clone + 'static> Element<A> for ProgressBarElement {
         event: ElementEvent,
         cx: &mut ElementContext<'_, A>
     ) -> EventCaptureStatus {
+        let shared_state = RefCell::borrow_mut(&self.shared_state);
+
+        shared_state
+            .tooltip_inner
+            .handle_event(&event, shared_state.disabled, cx);
+
         if let ElementEvent::CustomStateChanged = event {
             cx.request_repaint();
         }
@@ -152,15 +165,17 @@ impl<A: Clone + 'static> Element<A> for ProgressBarElement {
     }
 }
 
-#[derive(Default)]
 struct SharedState {
     percent: f32,
+    disabled: bool,
+    tooltip_inner: TooltipInner,
 }
 
 /// A handle to a [`ProgressBarElement`], a simple element that displays a horizontal progress bar.
 #[element_handle]
 #[element_handle_class]
 #[element_handle_set_rect]
+#[element_handle_set_tooltip]
 pub struct ProgressBar {
     shared_state: Rc<RefCell<SharedState>>,
 }
@@ -196,6 +211,29 @@ impl ProgressBar {
     /// to the range [0.0, 100.0].
     pub fn percent(&self) -> f32 {
         RefCell::borrow(&self.shared_state).percent
+    }
+
+    /// Set the disabled state of this element.
+    ///
+    /// Returns `true` if the disabled state has changed.
+    ///
+    /// This will *NOT* trigger an element update unless the state has changed,
+    /// so this method is relatively inexpensive to call.
+    pub fn set_disabled(&mut self, disabled: bool) -> bool {
+        let mut shared_state = RefCell::borrow_mut(&self.shared_state);
+
+        if shared_state.disabled != disabled {
+            shared_state.disabled = disabled;
+            self.el.notify_custom_state_change();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn disabled(&self) -> bool {
+        let shared_state = RefCell::borrow(&self.shared_state);
+        shared_state.disabled
     }
 
 }
